@@ -4,14 +4,10 @@
     flex: 1 1 auto;
     margin: 0.5rem;
     padding: 0.25rem;
-    border: 0.1rem;
+    border: 0.075rem;
     border-style: solid;
     border-color: black;
     border-radius: 0.5rem;
-}
-
-.score-date {
-    font-size: 0.8rem;
 }
 
 .team {
@@ -27,6 +23,7 @@
     justify-content: space-between;
     align-items: center;
     flex: 1 1 auto;
+    font-size: 0.75rem;
 }
 
 .team-and-badge {
@@ -39,5 +36,5 @@
 }
 
 .team-badge {
-    max-height: 1.2rem;
+    max-height: 1.25rem;
 }
