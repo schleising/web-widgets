@@ -34,14 +34,14 @@ h3.header-text {
   display: flex;
   flex-direction: row;
   flex: 1 1 auto;
-  /* overflow-y: auto; */
+  overflow-y: auto;
 }
 
 .sidebar {
   color: white;
   display: flex;
   flex-direction: column;
-  /* overflow-y: auto; */
+  overflow-y: auto;
   flex: 0 0 auto;
 }
 
@@ -50,7 +50,7 @@ h3.header-text {
   display: flex;
   flex: 1 1 auto;
   flex-direction: column;
-  /* overflow-y: auto; */
+  overflow-y: auto;
 }
 
 #footer {
@@ -80,7 +80,7 @@ video {
   max-width: 100%;
 }
 
-.blog-link {
+.navbar-link {
   cursor: pointer;
   user-select: none;
 }

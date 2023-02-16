@@ -64,4 +64,8 @@ a.sub-level-nav {
     .main-nav:hover .sub-level-nav-container {
         display: flex;
     }
+
+    .sidebar {
+        overflow-y: visible;
+    }
 }
