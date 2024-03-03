@@ -1,0 +1,91 @@
+button {
+    margin: 0.5rem;
+}
+
+[popover]:popover-open {
+    border: none;
+    opacity: 1;
+    transform: scale(1);
+
+    @starting-style {
+        opacity: 0;
+        transform: scale(0);
+    }
+}    
+
+[popover] {
+    opacity: 0;
+    transform: scale(0);
+    transition: opacity 0.5s;
+    transition: transform 0.5s;
+}    
+
+::backdrop {
+    backdrop-filter: blur(0.1rem);
+}
+
+.file-stats-popup-container-2 {
+    position: fixed;
+    width: fit-content;
+    height: fit-content;
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 66%);
+}
+
+.file-stats-popup-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    margin: 0.5rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 66%);
+}
+
+.file-stats-popup-header {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.file-stats-popup-body {
+    display: flex;
+}
+
+.file-stats-popup-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex: 1 1 auto;
+    column-gap: 0.5rem;
+}
+
+.file-stats-popup-col {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 0.25rem;
+    border-radius: 0.5rem;
+    background-color: hsl(219, 79%, 66%);
+    color: white;
+}
+
+.file-stats-popup-data {
+    padding: 0.25rem;;
+}
+
+.file-stats-popup-key {
+    font-size: 0.75rem;
+    margin: 0;
+}
+
+.file-stats-popup-value {
+    font-weight: bold;
+    font-size: 0.75rem;
+    margin: 0;
+}
