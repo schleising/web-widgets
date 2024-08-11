@@ -2,13 +2,13 @@
 // The temperature should be a random number between 15 and 30.
 // The array should contain 7 objects, one for each day of the week.
 const weeklyTempData = [
-    { day: 18, temp: Math.random() * 16 + 15 },
-    { day: 19, temp: Math.random() * 16 + 15 },
-    { day: 20, temp: Math.random() * 16 + 15 },
-    { day: 21, temp: Math.random() * 16 + 15 },
-    { day: 22, temp: Math.random() * 16 + 15 },
-    { day: 23, temp: Math.random() * 16 + 15 },
-    { day: 24, temp: Math.random() * 16 + 15 }
+    { day: 18, temp: Math.random() * 15 + 15 },
+    { day: 19, temp: Math.random() * 15 + 15 },
+    { day: 20, temp: Math.random() * 15 + 15 },
+    { day: 21, temp: Math.random() * 15 + 15 },
+    { day: 22, temp: Math.random() * 15 + 15 },
+    { day: 23, temp: Math.random() * 15 + 15 },
+    { day: 24, temp: Math.random() * 15 + 15 }
 ];
 
 function convertRemToPixels(rem) {
