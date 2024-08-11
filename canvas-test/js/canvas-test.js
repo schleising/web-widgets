@@ -114,7 +114,7 @@ function onResize() {
     drawTicks(context, minTime, maxTime, minTemp, maxTemp);
 
     // Draw the temperature data on the grid in temperature and time scaling to the canvas
-    drawTemperatureData(context);
+    drawTemperatureData(context, inset, height - inset);
 }
 
 function drawGrid(context, minTime, maxTime, minTemp, maxTemp) {
@@ -181,7 +181,16 @@ function drawTicks(context, minTime, maxTime, minTemp, maxTemp) {
     }
 }
 
-function drawTemperatureData(context) {
+function drawTemperatureData(context, minHeight, maxHeight) {
+    // Create a path for the temperature data to check if the mouse is over the line
+    const path = new Path2D();
+
+    // Draw the temperature data
+    path.moveTo(scaleAndTranslateX(new Date(hourlyTempData[0].timestamp).getTime()), scaleAndTranslateY(hourlyTempData[0].temp));
+    for (let i = 1; i < hourlyTempData.length; i++) {
+        // Draw the temperature data
+        path.lineTo(scaleAndTranslateX(new Date(hourlyTempData[i].timestamp).getTime()), scaleAndTranslateY(hourlyTempData[i].temp));
+    }    
     // Set the line width for the temperature data
     context.lineWidth = 1.5;
 
@@ -189,10 +198,31 @@ function drawTemperatureData(context) {
     context.strokeStyle = '#ff0000';
 
     // Draw the temperature data
-    context.beginPath();
-    context.moveTo(scaleAndTranslateX(new Date(hourlyTempData[0].timestamp).getTime()), scaleAndTranslateY(hourlyTempData[0].temp));
-    for (let i = 1; i < hourlyTempData.length; i++) {
-        context.lineTo(scaleAndTranslateX(new Date(hourlyTempData[i].timestamp).getTime()), scaleAndTranslateY(hourlyTempData[i].temp));
-    }
-    context.stroke();
+    context.stroke(path);
+
+    let canvas = document.getElementById('canvas-device1');
+
+    canvas.addEventListener('mousemove', function (event) {
+        const rect = canvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+
+        // Work out the intercept of the path with a vertical line at x
+        for (let y = minHeight; y < maxHeight; y++) {
+            if (context.isPointInStroke(path, x, y)) {
+                // Populate the temperature and humidity values into the width and height fields
+                // Convert the x and y values back to the original values
+                const time = (x - xTrans) / xScale;
+                const temp = (y - yTrans) / yScale;
+                document.getElementById('width').innerText = new Date(time).toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                document.getElementById('height').innerText = temp.toFixed(1) + '°C';
+                break;
+            }
+        }
+    });
+
+    canvas.addEventListener('mouseleave', function (_) {
+        // Clear the width and height fields
+        document.getElementById('width').innerText = '';
+        document.getElementById('height').innerText = '';
+    });
 }
