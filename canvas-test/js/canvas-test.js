@@ -72,7 +72,8 @@ function onResize() {
     canvas.width = width;
     canvas.height = height;
 
-    // Make the background white
+    // Clear the canvas and make the background white
+    context.clearRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = 'white';
     context.fillRect(0, 0, canvas.width, canvas.height);
 
