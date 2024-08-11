@@ -1,15 +1,40 @@
-// Create an array of objects, where each object contains the day of the week and the temperature for that day.
-// The temperature should be a random number between 15 and 30.
-// The array should contain 7 objects, one for each day of the week.
-const weeklyTempData = [
-    { day: 18, temp: Math.random() * 15 + 15 },
-    { day: 19, temp: Math.random() * 15 + 15 },
-    { day: 20, temp: Math.random() * 15 + 15 },
-    { day: 21, temp: Math.random() * 15 + 15 },
-    { day: 22, temp: Math.random() * 15 + 15 },
-    { day: 23, temp: Math.random() * 15 + 15 },
-    { day: 24, temp: Math.random() * 15 + 15 }
+// Create hourly test data for one day
+// The data should be an array of objects containing:
+// The name of the device
+// The timestamp in timezone UTC in iso format, in one hour intervals
+// The temperature in degrees Celsius between 15 and 25 degrees, smoothly changing, not random
+// The humidity in percentage
+const hourlyTempData = [
+    { device: 'device1', timestamp: '2024-08-11T00:00:00Z', temp: 15, humidity: 50 },
+    { device: 'device1', timestamp: '2024-08-11T01:00:00Z', temp: 16, humidity: 51 },
+    { device: 'device1', timestamp: '2024-08-11T02:00:00Z', temp: 17, humidity: 52 },
+    { device: 'device1', timestamp: '2024-08-11T03:00:00Z', temp: 18, humidity: 53 },
+    { device: 'device1', timestamp: '2024-08-11T04:00:00Z', temp: 19, humidity: 54 },
+    { device: 'device1', timestamp: '2024-08-11T05:00:00Z', temp: 20, humidity: 55 },
+    { device: 'device1', timestamp: '2024-08-11T06:00:00Z', temp: 21, humidity: 56 },
+    { device: 'device1', timestamp: '2024-08-11T07:00:00Z', temp: 22, humidity: 57 },
+    { device: 'device1', timestamp: '2024-08-11T08:00:00Z', temp: 23, humidity: 58 },
+    { device: 'device1', timestamp: '2024-08-11T09:00:00Z', temp: 24, humidity: 59 },
+    { device: 'device1', timestamp: '2024-08-11T10:00:00Z', temp: 25, humidity: 60 },
+    { device: 'device1', timestamp: '2024-08-11T11:00:00Z', temp: 24, humidity: 59 },
+    { device: 'device1', timestamp: '2024-08-11T12:00:00Z', temp: 23, humidity: 58 },
+    { device: 'device1', timestamp: '2024-08-11T13:00:00Z', temp: 22, humidity: 57 },
+    { device: 'device1', timestamp: '2024-08-11T14:00:00Z', temp: 21, humidity: 56 },
+    { device: 'device1', timestamp: '2024-08-11T15:00:00Z', temp: 20, humidity: 55 },
+    { device: 'device1', timestamp: '2024-08-11T16:00:00Z', temp: 19, humidity: 54 },
+    { device: 'device1', timestamp: '2024-08-11T17:00:00Z', temp: 18, humidity: 53 },
+    { device: 'device1', timestamp: '2024-08-11T18:00:00Z', temp: 17, humidity: 52 },
+    { device: 'device1', timestamp: '2024-08-11T19:00:00Z', temp: 16, humidity: 51 },
+    { device: 'device1', timestamp: '2024-08-11T20:00:00Z', temp: 15, humidity: 50 },
+    { device: 'device1', timestamp: '2024-08-11T21:00:00Z', temp: 16, humidity: 51 },
+    { device: 'device1', timestamp: '2024-08-11T22:00:00Z', temp: 17, humidity: 52 },
+    { device: 'device1', timestamp: '2024-08-11T23:00:00Z', temp: 18, humidity: 53 }
 ];
+
+var xScale = 0;
+var yScale = 0;
+var xTrans = 0;
+var yTrans = 0;
 
 function convertRemToPixels(rem) {
     return rem * parseFloat(getComputedStyle(document.documentElement).fontSize);
@@ -23,9 +48,20 @@ document.addEventListener('DOMContentLoaded', function () {
 // Check for resize events
 window.addEventListener('resize', onResize);
 
+// Scale and translate the x value to the canvas
+function scaleAndTranslateX(time) {
+    return time * xScale + xTrans;
+}
+
+// Scale and translate the y value to the canvas
+function scaleAndTranslateY(temp) {
+    return temp * yScale + yTrans;
+}
+
+// On resize, draw the grid and the chart
 function onResize() {
     // Get the canvas and context
-    const canvas = document.getElementById('canvas-test');
+    const canvas = document.getElementById('canvas-device1');
     const context = canvas.getContext('2d');
 
     // Get the width and height of the main div
@@ -36,23 +72,51 @@ function onResize() {
     canvas.width = width;
     canvas.height = height;
 
+    // Make the background white
+    context.fillStyle = 'white';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    const inset = 30;
+    const gridWidth = width - 2 * inset;
+    const gridHeight = height - 2 * inset;
+
     // Set the canvas width and height in the HTML
     document.getElementById('width').innerText = canvas.width;
     document.getElementById('height').innerText = canvas.height;
 
-    // Draw the grid
-    drawGrid(context, width, height);
+    // Get the minimum and maximum time as milliseconds since epoch
+    const minTime = new Date(hourlyTempData[0].timestamp).getTime();
+    const maxTime = new Date(hourlyTempData[hourlyTempData.length - 1].timestamp).getTime();
+
+    // Get the difference in time in milliseconds
+    const timeDiff = maxTime - minTime;
+
+    // Get the minimum and maximum temperature floor and ceiling
+    const minTemp = Math.floor(Math.min(...hourlyTempData.map(data => data.temp)));
+    const maxTemp = Math.ceil(Math.max(...hourlyTempData.map(data => data.temp)));
+
+    // Get the difference in temperature
+    const tempDiff = maxTemp - minTemp;
+
+    // Calculate the x and y scaling factors
+    xScale = gridWidth / timeDiff;
+    yScale = -gridHeight / tempDiff;
+
+    // Calculate the x and x translation factors after scaling
+    xTrans = -minTime * xScale + inset;
+    yTrans = -maxTemp * yScale + inset;
+
+    // Draw the grid in temperature and time scaling to the canvas
+    drawGrid(context, minTime, maxTime, minTemp, maxTemp);
+
+    // Draw the ticks on the grid in temperature and time scaling to the canvas
+    drawTicks(context, minTime, maxTime, minTemp, maxTemp);
+
+    // Draw the temperature data on the grid in temperature and time scaling to the canvas
+    drawTemperatureData(context);
 }
 
-
-function drawGrid(context, width, height) {
-    // Make the background yellow
-    context.fillStyle = 'white';
-    context.fillRect(0, 0, width, height);
-
-    // Set the inset for the grid
-    const inset = 30;
-
+function drawGrid(context, minTime, maxTime, minTemp, maxTemp) {
     // Set the line width for the grid
     context.lineWidth = 0.75;
 
@@ -61,89 +125,73 @@ function drawGrid(context, width, height) {
 
     // Draw graph axes
     context.beginPath();
-    context.moveTo(inset, inset);
-    context.lineTo(inset, height - inset);
-    context.lineTo(width - inset, height - inset);
+    context.moveTo(scaleAndTranslateX(minTime), scaleAndTranslateY(maxTemp));
+    context.lineTo(scaleAndTranslateX(minTime), scaleAndTranslateY(minTemp));
+    context.lineTo(scaleAndTranslateX(maxTime), scaleAndTranslateY(minTemp));
     context.stroke();
-
-    // Draw the grid axis ticks
-    drawTicks(context, inset, width, height);
 }
 
-function drawTicks(context, inset, width, height) {
+function drawTicks(context, minTime, maxTime, minTemp, maxTemp) {
     // Set the tick length to be the minimum of 10 and 1% of the width
-    const tickLength = inset / 4;
-
-    // Get the min and max temperatures for the weekly data
-    const minTempWeekly = Math.floor(Math.min(...weeklyTempData.map(x => x.temp)));
-    const maxTempWeekly = Math.ceil(Math.max(...weeklyTempData.map(x => x.temp)));
+    const tickLength = 10;
 
     // Set the font for the ticks and lower the font weight
-    context.font = 'lighter 0.75rem Helvetica';
+    context.font = 'lighter 0.65rem Helvetica';
 
     // Set the colour of the text to black
     context.fillStyle = '#202020';
 
-    // Draw the weekly data ticks
-    for (let i = 0; i < weeklyTempData.length; i++) {
-        const x = inset + (i / (weeklyTempData.length - 1)) * (width - (2 * inset));
-        const text_x = x - convertRemToPixels(0.5);
+    // Draw the hourly data ticks
+    for (let i = 0; i < hourlyTempData.length; i++) {
+        const t = new Date(hourlyTempData[i].timestamp);
+        const x = scaleAndTranslateX(t.getTime());
         context.beginPath();
-        context.moveTo(x, height - inset);
-        context.lineTo(x, height - inset + tickLength);
+        context.moveTo(x, scaleAndTranslateY(minTemp));
+        context.lineTo(x, scaleAndTranslateY(minTemp) + tickLength);
         context.stroke();
-        context.fillText(weeklyTempData[i].day, text_x, height - inset + tickLength + 15);
+        hourText = t.getHours();
+        hourWidth = context.measureText(hourText).width;
+        context.fillText(hourText, x - (hourWidth / 2), scaleAndTranslateY(minTemp) + tickLength + 15);
     }
 
-    // Draw the weekly temperature data ticks with the min and max temperatures
-    temperatureSteps = Math.ceil(maxTempWeekly - minTempWeekly);
+    // Draw the hourly temperature data ticks with the min and max temperatures
+    temperatureSteps = Math.ceil(maxTemp - minTemp);
 
     for (let i = 0; i <= temperatureSteps; i++) {
         // Set the colour of the grid to black
-        context.strokeStyle = '#202020';
-        const y = height - inset - (i / temperatureSteps) * (height - 2 * inset);
-        const text_y = y + convertRemToPixels(0.25);
+        context.strokeStyle = '#222';
+        const y = scaleAndTranslateY(minTemp + i);
         context.beginPath();
-        context.moveTo(inset, y);
-        context.lineTo(inset - tickLength, y);
+        context.moveTo(scaleAndTranslateX(minTime), y);
+        context.lineTo(scaleAndTranslateX(minTime) - tickLength, y);
         context.stroke();
-        context.fillText(minTempWeekly + i, inset / 3 - tickLength, text_y);
 
-        if (i != 0) {
-            // Draw light grey horizontal lines for the temperature data
-            context.strokeStyle = 'lightgrey';
-            context.beginPath();
-            context.moveTo(inset, y);
-            context.lineTo(width - inset, y);
-            context.stroke();
-        }
+        // Set the colour of the grid to grey and draw a thin line at the temperature tick
+        context.strokeStyle = '#ddd';
+        context.beginPath();
+        context.moveTo(scaleAndTranslateX(minTime), y);
+        context.lineTo(scaleAndTranslateX(maxTime), y);
+        context.stroke();
+
+
+        tempText = minTemp + i;
+        tempHeight = context.measureText(tempText).actualBoundingBoxAscent - context.measureText(tempText).actualBoundingBoxDescent;
+        context.fillText(tempText, scaleAndTranslateX(minTime) - tickLength - 15, y + (tempHeight / 2));
     }
-
-    // Draw the graph
-    drawGraph(context, inset, width, height);
 }
 
+function drawTemperatureData(context) {
+    // Set the line width for the temperature data
+    context.lineWidth = 1.5;
 
-// Draw the graph so that the x-axis is the day of the week and the y-axis is the temperature
-// The data points should be centered between the x-axis ticks
-function drawGraph(context, inset, width, height) {
-    // Get the min and max temperatures for the weekly data
-    const minTempWeekly = Math.floor(Math.min(...weeklyTempData.map(x => x.temp)));
-    const maxTempWeekly = Math.ceil(Math.max(...weeklyTempData.map(x => x.temp)));
+    // Set the colour of the temperature data to red
+    context.strokeStyle = '#ff0000';
 
-    // Set the line width for the graph
-    context.lineWidth = 2;
-
-    // Set the colour of the graph to blue
-    context.strokeStyle = 'cornflowerblue';
-
-    // Draw the weekly temperature data
+    // Draw the temperature data
     context.beginPath();
-    for (let i = 0; i < weeklyTempData.length; i++) {
-        const x = inset + (i / (weeklyTempData.length - 1)) * (width - (2 * inset));
-        const y = height - inset - ((weeklyTempData[i].temp - minTempWeekly) / (maxTempWeekly - minTempWeekly)) * (height - 2 * inset);
-        context.lineTo(x, y);
+    context.moveTo(scaleAndTranslateX(new Date(hourlyTempData[0].timestamp).getTime()), scaleAndTranslateY(hourlyTempData[0].temp));
+    for (let i = 1; i < hourlyTempData.length; i++) {
+        context.lineTo(scaleAndTranslateX(new Date(hourlyTempData[i].timestamp).getTime()), scaleAndTranslateY(hourlyTempData[i].temp));
     }
     context.stroke();
-
 }
