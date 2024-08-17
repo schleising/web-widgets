@@ -1,0 +1,16 @@
+body {
+    margin: 0;
+    padding: 0.5rem;
+}
+
+.main {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    background-color: #f0f0f0;
+    width: 100%;
+}
+
+#canvas-test {
+    width: 100%;
+}
