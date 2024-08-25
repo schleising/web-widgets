@@ -4,7 +4,6 @@
 // The timestamp in timezone UTC in iso format, in one hour intervals
 // The temperature in degrees Celsius between 15 and 25 degrees, smoothly changing, not random
 // The humidity in percentage
-
 // JS Doc for the hourlyTempData array
 /**
  * @type {Array.<{device: string, timestamp: string, temp: number, humidity: number}>}
@@ -75,31 +74,34 @@ const hourlyTempData = [
     { device: 'device2', timestamp: '2024-08-11T23:00:00Z', temp: 15, humidity: 53 }
 ];
 
-// Convert time since epoch from milliseconds to seconds to remove issues with time being bigger than the maximum value of a 32-bit integer
+// Convert time since epoch from milliseconds to seconds
 const timeScale = 1000;
-
-/**
- * @type {Map.<string, Array.<{device: string, timestamp: string, temp: number, humidity: number}>>}
- */
-var globalDeviceData = new Map();
 
 document.addEventListener('DOMContentLoaded', () => {
     // Fetch the hourly data for the device as a map of device name to hourly data
     fetchHourlyData()
         .then(deviceData => {
-            // Set the global device data
-            globalDeviceData = deviceData;
+            let localDeviceData = deviceData;
 
-            // Draw the chart for the device
-            drawCharts();
-
-            // Log that we have fetched the hourly data
-            console.log('Fetched hourly data');
-            // Add a resize event listener to the window to redraw the charts
-            window.addEventListener('resize', () => {
-                // Draw the chart for the device
-                updateCharts();
+            // Create an identity matrix map for the devices
+            let localDeviceMatrix = new Map();
+            deviceData.forEach((_, device) => {
+                localDeviceMatrix.set(device, new DOMMatrix());
             });
+
+            // Iterate over the devices drawing the chart for each device
+            window.addEventListener('resize', () => {
+                document.querySelectorAll('.chart-svg').forEach(svg => {
+                    // Iterate over the devices drawing the chart for each device
+                    for (const [device, deviceData] of localDeviceData) {
+                        // Draw the chart for the device
+                        drawChart(device, deviceData);
+                    }
+                });    
+            });    
+
+            // Call the resize event to set the initial width and height of the svg
+            window.dispatchEvent(new Event('resize'));
         });
 });
 
@@ -136,19 +138,6 @@ async function fetchHourlyData() {
 }
 
 /**
- * Update the charts for the devices
- * @returns {void}
- * @description This function updates the charts for the devices
- */
-function drawCharts() {
-    // Iterate over the global device data
-    for (const [device, deviceData] of globalDeviceData) {
-        // Draw the chart for the device
-        drawChart(device, deviceData);
-    }
-}
-
-/**
  * Draw a line chart of the temperature and humidity data for a device
  * @param {string} device - The name of the device
  * @param {Array.<{device: string, timestamp: string, temp: number, humidity: number}>} deviceData - The hourly temperature and humidity data for a device
@@ -158,12 +147,16 @@ function drawChart(device, deviceData) {
     const yBorder = 50;
     try {
         // Get the svg element
-        let svgElement = document.getElementById('chart-' + device);
+        svgElement = document.getElementById('chart-' + device);
 
         //  Clear the svg element
         while (svgElement.firstChild) {
             svgElement.removeChild(svgElement.firstChild);
         }
+
+        // Close the svg element and replace the original svg element with the cloned svg element
+        const svgClone = svgElement.cloneNode(true);
+        svgElement.parentNode.replaceChild(svgClone, svgElement);
 
         // Get the width of the main-div
         const width = document.getElementById('main-div').offsetWidth;
@@ -172,11 +165,11 @@ function drawChart(device, deviceData) {
         const height = width * 9 / 16;
 
         // Set the width and height of the svg to the width and height of the main-div
-        svgElement.setAttribute('width', width);
-        svgElement.setAttribute('height', height);
+        svgClone.setAttribute('width', width);
+        svgClone.setAttribute('height', height);
 
         // Set the background color of the svg to light blue
-        svgElement.style.backgroundColor = 'lightblue';
+        svgClone.style.backgroundColor = 'lightblue';
 
 
         // Get the minimum and maximum temperature values
@@ -195,8 +188,8 @@ function drawChart(device, deviceData) {
 
         // Calculate the scale values for the temperature data
         const tempScale = {
-            x: (svgElement.clientWidth - 2 * xBorder) / (maxTimestamp - minTimestamp),
-            y: (svgElement.clientHeight - 2 * yBorder) / (maxTemp - minTemp)
+            x: (svgClone.clientWidth - 2 * xBorder) / (maxTimestamp - minTimestamp),
+            y: (svgClone.clientHeight - 2 * yBorder) / (maxTemp - minTemp)
         };
 
         // Create a tranlation for the borders
@@ -211,12 +204,6 @@ function drawChart(device, deviceData) {
             .scale(tempScale.x, -tempScale.y)
             .translate(tempTranslation.x, tempTranslation.y);
 
-        // Create a group element for the axes
-        const axesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        axesGroup.setAttribute('id', 'axes-group-' + device);
-        axesGroup.setAttribute('class', 'axes-group');
-        svgElement.appendChild(axesGroup);
-
         // Draw the axes
         const topLeft = new DOMPointReadOnly(minTimestamp, maxTemp).matrixTransform(tempMatrix);
         const bottomLeft = new DOMPointReadOnly(minTimestamp, minTemp).matrixTransform(tempMatrix);
@@ -225,57 +212,30 @@ function drawChart(device, deviceData) {
         // Create a polyline element for the axes
         const axesPolyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
         axesPolyline.setAttribute('class', 'axes-polyline');
-        axesPolyline.setAttribute('id', 'axes-polyline-' + device);
         axesPolyline.setAttribute('fill', 'none');
         axesPolyline.setAttribute('stroke', 'black');
         axesPolyline.setAttribute('stroke-width', 1);
         axesPolyline.setAttribute('points', `${topLeft.x},${topLeft.y} ${bottomLeft.x},${bottomLeft.y} ${bottomRight.x},${bottomRight.y}`);
-        axesGroup.appendChild(axesPolyline);
+        svgClone.appendChild(axesPolyline);
 
         // Create the x-axis label
         const xAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        xAxisLabel.setAttribute('class', 'x-axis-label');
         xAxisLabel.setAttribute('x', bottomRight.x);
         xAxisLabel.setAttribute('y', bottomRight.y + 40);
         xAxisLabel.setAttribute('text-anchor', 'end');
         xAxisLabel.setAttribute('font-size', 12);
         xAxisLabel.textContent = 'Time';
-        axesGroup.appendChild(xAxisLabel);
+        svgClone.appendChild(xAxisLabel);
 
         // Create the y-axis label
         const yAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        yAxisLabel.setAttribute('class', 'y-axis-label');
         yAxisLabel.setAttribute('x', topLeft.x - 10);
         yAxisLabel.setAttribute('y', topLeft.y - 25);
         yAxisLabel.setAttribute('text-anchor', 'middle');
         yAxisLabel.setAttribute('font-size', 12);
         yAxisLabel.textContent = 'Temp';
-        axesGroup.appendChild(yAxisLabel);
+        svgClone.appendChild(yAxisLabel);
 
-        // Draw the x axis ticks
-        for (let timestamp = minTimestamp; timestamp <= maxTimestamp; timestamp += 3600) {
-            const pt = new DOMPointReadOnly(timestamp, minTemp).matrixTransform(tempMatrix);
-            
-            // Create a polyline element for the x axis ticks
-            const xAxisTick = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-            xAxisTick.setAttribute('class', 'x-axis-tick');
-            xAxisTick.setAttribute('fill', 'none');
-            xAxisTick.setAttribute('stroke', 'black');
-            xAxisTick.setAttribute('stroke-width', 1);
-            xAxisTick.setAttribute('points', `${pt.x},${pt.y} ${pt.x},${pt.y + 5}`);
-            axesGroup.appendChild(xAxisTick);
-            
-            // Create a text element for the x axis labels
-            const xAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            xAxisLabel.setAttribute('class', 'x-axis-tick-label');
-            xAxisLabel.setAttribute('x', pt.x);
-            xAxisLabel.setAttribute('y', pt.y + 20);
-            xAxisLabel.setAttribute('text-anchor', 'middle');
-            xAxisLabel.setAttribute('font-size', 12);
-            xAxisLabel.textContent = new Date(timestamp * timeScale).toLocaleTimeString([], { hour: '2-digit' });
-            axesGroup.appendChild(xAxisLabel);
-        }
-        
         // Draw the y axis ticks
         for (let temp = minTemp; temp <= maxTemp; temp += 1) {
             const pt = new DOMPointReadOnly(minTimestamp, temp).matrixTransform(tempMatrix);
@@ -287,17 +247,39 @@ function drawChart(device, deviceData) {
             yAxisTick.setAttribute('stroke', 'black');
             yAxisTick.setAttribute('stroke-width', 1);
             yAxisTick.setAttribute('points', `${pt.x - 5},${pt.y} ${pt.x},${pt.y}`);
-            axesGroup.appendChild(yAxisTick);
+            svgClone.appendChild(yAxisTick);
 
             // Create a text element for the y axis labels
             const yAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            yAxisLabel.setAttribute('class', 'y-axis-tick-label');
             yAxisLabel.setAttribute('x', pt.x - 15);
             yAxisLabel.setAttribute('y', pt.y + 5);
             yAxisLabel.setAttribute('text-anchor', 'middle');
             yAxisLabel.setAttribute('font-size', 12);
             yAxisLabel.textContent = temp;
-            axesGroup.appendChild(yAxisLabel);
+            svgClone.appendChild(yAxisLabel);
+        }
+
+        // Draw the x axis ticks
+        for (let timestamp = minTimestamp; timestamp <= maxTimestamp; timestamp += 3600) {
+            const pt = new DOMPointReadOnly(timestamp, minTemp).matrixTransform(tempMatrix);
+
+            // Create a polyline element for the x axis ticks
+            const xAxisTick = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+            xAxisTick.setAttribute('class', 'x-axis-tick');
+            xAxisTick.setAttribute('fill', 'none');
+            xAxisTick.setAttribute('stroke', 'black');
+            xAxisTick.setAttribute('stroke-width', 1);
+            xAxisTick.setAttribute('points', `${pt.x},${pt.y} ${pt.x},${pt.y + 5}`);
+            svgClone.appendChild(xAxisTick);
+
+            // Create a text element for the x axis labels
+            const xAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            xAxisLabel.setAttribute('x', pt.x);
+            xAxisLabel.setAttribute('y', pt.y + 20);
+            xAxisLabel.setAttribute('text-anchor', 'middle');
+            xAxisLabel.setAttribute('font-size', 12);
+            xAxisLabel.textContent = new Date(timestamp * timeScale).toLocaleTimeString([], { hour: '2-digit' });
+            svgClone.appendChild(xAxisLabel);
         }
 
         // Transform the data to fit the svg
@@ -324,217 +306,46 @@ function drawChart(device, deviceData) {
         tempPolyline.setAttribute('stroke', 'red');
         tempPolyline.setAttribute('stroke-width', 1);
         tempPolyline.setAttribute('points', transformedData.map(data => `${data.timestamp},${data.temp}`).join(' '));
-        svgElement.appendChild(tempPolyline);
+        svgClone.appendChild(tempPolyline);
 
         // Create the mouse move event listener for the svg
-        svgElement.addEventListener('mousemove', event => {
-            handleMouseMove(event, svgElement, tempMatrix);
-        });
-
-        // Create the touch event listener for the svg
-        svgElement.addEventListener('touchstart', event => {
-            // handleMouseMove(event.touches[0], svgElement, tempMatrix);
-        }, { passive: true });
-
-        // Create the mouse leave event listener for the svg
-        svgElement.addEventListener('mouseleave', () => {
-            // Clear all circles from the svg
-            document.querySelectorAll('circle').forEach(circle => {
-                circle.remove();
-            });
-
-            // Clear the line-x and line-y elements
-            document.getElementById('line-x').innerText = '';
-            document.getElementById('line-y').innerText = '';
-        });
+        addMouseMoveListener(svgClone, tempMatrix);
     } catch (e) {
         console.log(e);
         return;
     }
 }
 
-/**
- * Update the charts for the devices
- * @returns {void}
- * @description This function updates the charts for the devices
- */
-function updateCharts() {
-    // Iterate over the global device data
-    for (const [device, deviceData] of globalDeviceData) {
-        // Update the chart for the device
-        updateChart(device, deviceData);
-    }
-}
+function addMouseMoveListener(svgElement, transformationMatrix) {
+    // Add an event listener to the svg to display the temperature and humidity data
+    svgElement.addEventListener('mousemove', event => {
+        handleMouseMove(event, svgElement, transformationMatrix);
+    });
 
-/**
- * Update the chart for the device
- * @param {string} device - The name of the device
- * @param {Array.<{device: string, timestamp: string, temp: number, humidity: number}>} deviceData - The hourly temperature and humidity data for a device
- */
-function updateChart(device, deviceData) {
-    const xBorder = 30;
-    const yBorder = 50;
-    try {
-        // Get the svg element
-        let svgElement = document.getElementById('chart-' + device);
+    // Add touch event listeners to the svg
+    svgElement.addEventListener('touchstart', event => {
+        handleMouseMove(event.touches[0], svgElement, transformationMatrix);
+        console.log('touchstart');
+    }, { passive: true });
 
-        // Get the width of the main-div
-        const width = document.getElementById('main-div').offsetWidth;
 
-        // Set the height of the svg to maintain a 16:9 aspect ratio
-        const height = width * 9 / 16;
 
-        // Set the width and height of the svg to the width and height of the main-div
-        svgElement.setAttribute('width', width);
-        svgElement.setAttribute('height', height);
-
-        // Get the minimum and maximum temperature values
-        const minTemp = Math.min(...deviceData.map(data => data.temp));
-        const maxTemp = Math.max(...deviceData.map(data => data.temp));
-
-        // Get the minimum and maximum timestamp values
-        const minTimestamp = new Date(deviceData[0].timestamp).getTime() / timeScale;
-        const maxTimestamp = new Date(deviceData[deviceData.length - 1].timestamp).getTime() / timeScale;
-
-        // Calculate the translation values for the temperature data
-        const tempTranslation = {
-            x: -minTimestamp,
-            y: -maxTemp
-        };
-
-        // Calculate the scale values for the temperature data
-        const tempScale = {
-            x: (svgElement.clientWidth - 2 * xBorder) / (maxTimestamp - minTimestamp),
-            y: (svgElement.clientHeight - 2 * yBorder) / (maxTemp - minTemp)
-        };
-
-        // Create a tranlation for the borders
-        const borderTranslation = {
-            x: xBorder,
-            y: yBorder
-        };
-
-        // Create the transfomation matrix for the temperature data to fit the svg
-        const tempMatrix = new DOMMatrixReadOnly()
-            .translate(borderTranslation.x, borderTranslation.y)
-            .scale(tempScale.x, -tempScale.y)
-            .translate(tempTranslation.x, tempTranslation.y);
-
-        // Draw the axes
-        const topLeft = new DOMPointReadOnly(minTimestamp, maxTemp).matrixTransform(tempMatrix);
-        const bottomLeft = new DOMPointReadOnly(minTimestamp, minTemp).matrixTransform(tempMatrix);
-        const bottomRight = new DOMPointReadOnly(maxTimestamp, minTemp).matrixTransform(tempMatrix);
-
-        // Get the polyline element for the axes
-        const axesPolyline = svgElement.querySelector('.axes-polyline');
-
-        // Update the points attribute of the polyline element for the axes
-        axesPolyline.setAttribute('points', `${topLeft.x},${topLeft.y} ${bottomLeft.x},${bottomLeft.y} ${bottomRight.x},${bottomRight.y}`);
-
-        // Get the x-axis label
-        const xAxisLabel = svgElement.querySelector('.x-axis-label');
-
-        // Update the x attribute of the x-axis label
-        xAxisLabel.setAttribute('x', bottomRight.x);
-        xAxisLabel.setAttribute('y', bottomRight.y + 40);
-
-        // Get the y-axis label
-        const yAxisLabel = svgElement.querySelector('.y-axis-label');
-
-        // Update the x attribute of the y-axis label
-        yAxisLabel.setAttribute('x', topLeft.x - 10);
-        yAxisLabel.setAttribute('y', topLeft.y - 25);
-
-        // Remove the x-axis ticks and labels
-        svgElement.querySelectorAll('.x-axis-tick').forEach(xAxisTick => {
-            xAxisTick.remove();
+    svgElement.addEventListener('mouseleave', () => {
+        // Clear all circles from the svg
+        document.querySelectorAll('circle').forEach(circle => {
+            circle.remove();
         });
 
-        svgElement.querySelectorAll('.x-axis-tick-label').forEach(xAxisLabel => {
-            xAxisLabel.remove();
-        });
-
-        // Draw the x axis ticks
-        for (let timestamp = minTimestamp; timestamp <= maxTimestamp; timestamp += 3600) {
-            const pt = new DOMPointReadOnly(timestamp, minTemp).matrixTransform(tempMatrix);
-
-            // Create a polyline element for the x axis ticks
-            const xAxisTick = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-            xAxisTick.setAttribute('class', 'x-axis-tick');
-            xAxisTick.setAttribute('fill', 'none');
-            xAxisTick.setAttribute('stroke', 'black');
-            xAxisTick.setAttribute('stroke-width', 1);
-            xAxisTick.setAttribute('points', `${pt.x},${pt.y} ${pt.x},${pt.y + 5}`);
-            svgElement.appendChild(xAxisTick);
-
-            // Create a text element for the x axis labels
-            const xAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            xAxisLabel.setAttribute('class', 'x-axis-tick-label');
-            xAxisLabel.setAttribute('x', pt.x);
-            xAxisLabel.setAttribute('y', pt.y + 20);
-            xAxisLabel.setAttribute('text-anchor', 'middle');
-            xAxisLabel.setAttribute('font-size', 12);
-            xAxisLabel.textContent = new Date(timestamp * timeScale).toLocaleTimeString([], { hour: '2-digit' });
-            svgElement.appendChild(xAxisLabel);
-        }
-
-        // Remove the y-axis ticks and labels
-        svgElement.querySelectorAll('.y-axis-tick').forEach(yAxisTick => {
-            yAxisTick.remove();
-        });
-
-        svgElement.querySelectorAll('.y-axis-tick-label').forEach(yAxisLabel => {
-            yAxisLabel.remove();
-        });
-
-        // Draw the y axis ticks
-        for (let temp = minTemp; temp <= maxTemp; temp += 1) {
-            const pt = new DOMPointReadOnly(minTimestamp, temp).matrixTransform(tempMatrix);
-
-            // Create a polyline element for the y axis ticks
-            const yAxisTick = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
-            yAxisTick.setAttribute('class', 'y-axis-tick');
-            yAxisTick.setAttribute('fill', 'none');
-            yAxisTick.setAttribute('stroke', 'black');
-            yAxisTick.setAttribute('stroke-width', 1);
-            yAxisTick.setAttribute('points', `${pt.x - 5},${pt.y} ${pt.x},${pt.y}`);
-            svgElement.appendChild(yAxisTick);
-
-            // Create a text element for the y axis labels
-            const yAxisLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-            yAxisLabel.setAttribute('class', 'y-axis-tick-label');
-            yAxisLabel.setAttribute('x', pt.x - 15);
-            yAxisLabel.setAttribute('y', pt.y + 5);
-            yAxisLabel.setAttribute('text-anchor', 'middle');
-            yAxisLabel.setAttribute('font-size', 12);
-            yAxisLabel.textContent = temp;
-            svgElement.appendChild(yAxisLabel);
-        }
-
-        // Get the polyline element for the temperature data
-        const tempPolyline = svgElement.querySelector('.temp-polyline');
-
-        // Recalculate the points attribute of the polyline element for the temperature data
-        tempPolyline.setAttribute('points', deviceData.map(data => {
-            const timestamp = new Date(data.timestamp).getTime() / timeScale;
-            const temp = data.temp;
-
-            const transformedPt = new DOMPointReadOnly(timestamp, temp)
-                .matrixTransform(tempMatrix);
-
-            return `${transformedPt.x},${transformedPt.y}`;
-        }).join(' '));
-        
-    } catch (e) {
-        console.log(e);
-        return;
-    }
+        // Clear the line-x and line-y elements
+        document.getElementById('line-x').innerText = '';
+        document.getElementById('line-y').innerText = '';
+    });
 }
 
 // Handle the mouse move event for the svg
 function handleMouseMove(event, svgElement, transformationMatrix) {
     // Clear all circles from the svg
-    svgElement.querySelectorAll('circle').forEach(circle => {
+    document.querySelectorAll('circle').forEach(circle => {
         circle.remove();
     });
 
@@ -574,8 +385,6 @@ function handleMouseMove(event, svgElement, transformationMatrix) {
         .matrixTransform(transformationMatrix.inverse());
 
     // Update the line-x and line-y elements to the closest point on the polyline
-    document.getElementById('line-x').innerText = new Date(originalPt.x * timeScale)
-        .toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-
+    document.getElementById('line-x').innerText = new Date(originalPt.x * timeScale).toLocaleString([], { weekday: 'short', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
     document.getElementById('line-y').innerText = originalPt.y.toFixed(1);
 }

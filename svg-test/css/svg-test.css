@@ -5,12 +5,22 @@ body {
 
 .main {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: flex-start;
-    background-color: #f0f0f0;
+    /* background-color: #f0f0f0; */
     width: 100%;
 }
 
-#canvas-test {
+/* .chart-svg {
     width: 100%;
+    max-width: 800px;
+    height: auto;
+} */
+
+/* Once the window width is greater than 800px, the chart will be displayed side by side */
+@media (min-width: 800px) {
+    .main {
+        flex-direction: row;
+    }
 }
